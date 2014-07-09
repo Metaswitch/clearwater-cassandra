@@ -1,4 +1,6 @@
 . /etc/clearwater/config
+# Note that although this doesn't use any config settings, it's
+# structured like this for consistency with other files and future extensibility.
 cat << EOF
 # A simple configuration file for monitoring the local host
 # This can serve as an example for configuring other servers;
