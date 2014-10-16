@@ -34,13 +34,18 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-finish () {
-  rc=${2-2}
+readonly ERROR_USER=1
+readonly ERROR_SYSTEM=2
+
+die () {
+  # Set the error code to the value of the second argument if it exists,
+  # otherwise default it to a system error.
+  rc=${2:-$ERROR_SYSTEM}
   echo >&2 "$1"
   exit $rc
 }
 
-[ "$#" -ge 1 ] || finish "Usage: restore_backup.sh <keyspace> [backup] (will default to latest backup if none specified) [backup directory]" 1
+[ "$#" -ge 1 ] || die "Usage: restore_backup.sh <keyspace> [backup] (will default to latest backup if none specified) [backup directory]" $ERROR_USER
 KEYSPACE=$1
 COMPONENT=$(cut -d_ -f1 <<< $KEYSPACE)
 DATABASE=$(cut -d_ -f2 <<< $KEYSPACE)
@@ -80,18 +85,18 @@ then
   then
     echo "Found backup directory $BACKUP_DIR/$BACKUP"
   else
-    finish "Could not find specified backup directory $BACKUP_DIR/$BACKUP, use list_backups to see available backups" 1
+    die "Could not find specified backup directory $BACKUP_DIR/$BACKUP, use list_backups to see available backups" $ERROR_USER
   fi
 else
-  finish "No backups exist in $BACKUP_DIR" 0
+  echo "No backups exist in $BACKUP_DIR"
 fi
 
 # We've made sure all the necessary backups exist, proceed with backup
-[ -d "$DATA_DIR/$KEYSPACE" ] || finish "Keyspace $KEYSPACE does not exist" 1
+[ -d "$DATA_DIR/$KEYSPACE" ] || die "Keyspace $KEYSPACE does not exist" $ERROR_USER
 echo "Restoring backup for keyspace $KEYSPACE..."
 
 # Stop monit from restarting Cassandra while we restore
-monit stop cassandra
+monit unmonitor cassandra
 service cassandra stop
 
 echo "Clearing commitlog..."
@@ -109,4 +114,5 @@ do
   chown cassandra:cassandra $TARGET_DIR/*
 done
 
-monit start cassandra || service cassandra start
+service cassandra start
+monit monitor cassandra

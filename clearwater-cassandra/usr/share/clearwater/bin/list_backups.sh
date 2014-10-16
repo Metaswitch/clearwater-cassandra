@@ -34,19 +34,23 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-finish () {
-  rc=${2-2}
+readonly ERROR_USER=1
+
+die () {
+  # Set the error code to the value of the second argument if it exists,
+  # otherwise default it to a system error.
+  rc=${2:-$ERROR_SYSTEM}
   echo >&2 "$1"
   exit $rc
 }
 
-[ "$#" -ge 1 ] || finish "Usage: list_backup.sh <keyspace> [backup directory]" 1
+[ "$#" -ge 1 ] || die "Usage: list_backup.sh <keyspace> [backup directory]" $ERROR_USER
 KEYSPACE=$1
 COMPONENT=$(cut -d_ -f1 <<< $KEYSPACE)
 DATABASE=$(cut -d_ -f2 <<< $KEYSPACE)
 BACKUP_DIR=$2
 DATA_DIR=/var/lib/cassandra/data
-[ -d "$DATA_DIR/$KEYSPACE" ] || finish "Keyspace $KEYSPACE does not exist" 1
+[ -d "$DATA_DIR/$KEYSPACE" ] || die "Keyspace $KEYSPACE does not exist" $ERROR_USER
 
 if [[ -z "$BACKUP_DIR" ]]
 then
@@ -61,7 +65,7 @@ else
   echo "Will look for backups in $BACKUP_DIR"
 fi
 
-if [[ "$(ls -A $BACKUP_DIR)" ]]
+if [[ "$(ls -A $BACKUP_DIR 2> /dev/null)" ]]
 then
   for b in $BACKUP_DIR/*
   do
@@ -69,5 +73,5 @@ then
     echo "$SNAPSHOT"
   done
 else
-  finish "No backups exist in $BACKUP_DIR" 0
+  echo "No backups exist in $BACKUP_DIR"
 fi

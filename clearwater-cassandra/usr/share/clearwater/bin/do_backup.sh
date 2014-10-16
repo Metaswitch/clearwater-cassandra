@@ -34,20 +34,25 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
-finish () {
-  rc=${2-2}
+readonly ERROR_USER=1
+readonly ERROR_SYSTEM=2
+
+die () {
+  # Set the error code to the value of the second argument if it exists,
+  # otherwise default it to a system error.
+  rc=${2:-$ERROR_SYSTEM}
   echo >&2 "$1"
   exit $rc
 }
 
-[ "$#" -eq 1 ] || finish "Usage: do_backup.sh <keyspace>" 1
+[ "$#" -eq 1 ] || die "Usage: do_backup.sh <keyspace>" $ERROR_USER
 
 KEYSPACE=$1
 COMPONENT=$(cut -d_ -f1 <<< $KEYSPACE)
 DATABASE=$(cut -d_ -f2 <<< $KEYSPACE)
 DATA_DIR=/var/lib/cassandra/data
 
-[ -d "$DATA_DIR/$KEYSPACE" ] || finish "Keyspace $KEYSPACE does not exist" 1
+[ -d "$DATA_DIR/$KEYSPACE" ] || die "Keyspace $KEYSPACE does not exist" $ERROR_USER
 
 if [ -n "$DATABASE" ]
 then
@@ -73,9 +78,14 @@ done
 echo "Creating backup for keyspace $KEYSPACE..."
 nodetool -h localhost -p 7199 snapshot $KEYSPACE
 
+# Check we successfully took the snapshot by looking at the return code
+# for the nodetool command
+[ $? -eq 0 ] || die "Failed to take snapshot of the database" $ERROR_SYSTEM
+
 # Find all the non-empty snapshot directories in the keyspace we're taking a
-# snapshot of
-SNAPSHOT_DIRS=$(sudo find $DATA_DIR/$KEYSPACE -type d -not -empty | grep 'snapshots$')
+# snapshot of. Cassandra keeps snapshots per column family, so we have to find
+# them individually.
+SNAPSHOT_DIRS=$(find $DATA_DIR/$KEYSPACE -type d -not -empty | grep 'snapshots$')
 
 # Check we have enough disk space to copy over to the backup directory
 SNAPSHOT_SIZE=0
@@ -83,20 +93,19 @@ for d in $SNAPSHOT_DIRS
 do
   # Find the most recent snapshot
   SNAPSHOT=$(ls -t $d | head -1)
-  SNAPSHOT_SIZE=$(($SNAPSHOT_SIZE + `du -sk $d/$SNAPSHOT | cut -f 1`))
+  SNAPSHOT_SIZE=$(($SNAPSHOT_SIZE + $(du -sk $d/$SNAPSHOT | cut -f 1)))
 done
 
-AVAILABLE_SPACE=`df -k $BACKUP_DIR | grep -v "Filesystem" | awk '{ print $4 }'`
+AVAILABLE_SPACE=$(df -k $BACKUP_DIR | grep -v "Filesystem" | awk '{ print $4 }')
 
 # Only continue if the available space is at least as big as our snapshot
-(($AVAILABLE_SPACE >= $SNAPSHOT_SIZE)) || finish "Not enough available disk space to take backup" 2
+(($AVAILABLE_SPACE >= $SNAPSHOT_SIZE)) || die "Not enough available disk space to take backup" $ERROR_SYSTEM
 
-# Now copy over the shapshot and remove the backups from the Cassandra data
-# directory, leaving only the backups in the backup directory
+# Now copy over the shapshot.
 for d in $SNAPSHOT_DIRS
 do
   # Work out the table name from the path of the snapshots directory
-  TABLE=`basename $(dirname $d)`
+  TABLE=$(basename $(dirname $d))
 
   # Find the most recent snapshot
   SNAPSHOT=$(ls -t $d | head -1)
