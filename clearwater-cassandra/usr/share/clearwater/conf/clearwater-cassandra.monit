@@ -14,9 +14,9 @@ check program poll_cassandra_ring with path "/usr/share/clearwater/bin/poll_cass
 
 check process cassandra pidfile /var/run/cassandra.pid
 
-  start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit CASSANDRA_PROC_FAIL_CRITICAL; /etc/init.d/cassandra start'"
-  stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit CASSANDRA_PROC_FAIL_CRITICAL; /etc/init.d/cassandra stop'"
-  restart program  = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit CASSANDRA_PROC_FAIL_CRITICAL; /etc/init.d/cassandra restart'"
+  start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra start'"
+  stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
+  restart program  = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra restart'"
 
   if failed host localhost port 9160 type TCP
      with timeout 15 seconds
@@ -25,5 +25,5 @@ check process cassandra pidfile /var/run/cassandra.pid
 
   if uptime < 30 seconds
      then exec "/bin/true"
-     else if succeeded then exec "/usr/share/clearwater/bin/issue_alarm.py monit CASSANDRA_PROC_FAIL_CLEAR"
+     else if succeeded then exec "/usr/share/clearwater/bin/issue_alarm.py monit 4000.1"
 

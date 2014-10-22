@@ -84,7 +84,7 @@ check_clear_alarm()
 {
     if [ -f $alarm_state_file ] ; then
         rm -f $alarm_state_file
-        /usr/share/clearwater/bin/issue_alarm.py "monit" "CASSANDRA_RING_NODE_FAIL_CLEAR"
+        /usr/share/clearwater/bin/issue_alarm.py "monit" "4001.1"
     fi
 }
 
@@ -93,7 +93,7 @@ check_issue_alarm()
 {
     if [ ! -f $alarm_state_file ] ; then
         touch $alarm_state_file
-        /usr/share/clearwater/bin/issue_alarm.py "monit" "CASSANDRA_RING_NODE_FAIL_MAJOR"
+        /usr/share/clearwater/bin/issue_alarm.py "monit" "4001.4"
     fi
 }
 
