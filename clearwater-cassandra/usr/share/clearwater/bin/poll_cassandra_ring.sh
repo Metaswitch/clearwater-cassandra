@@ -35,10 +35,11 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 # This script is used by Monit to check connectivity to remote Cassandra
-# instances. If connectivity is lost to any instances in the ring, an 
-# alarm is issued. When connectivity is restored to all instances, the
-# alarm is cleared. Alarms are issued here vs. the Monit DSL to avoid
-# retransmissions.
+# instances. If connectivity is lost to any instances in the ring an
+# alarm will be issued (major severity for a single instance, critical
+# severity for more than one instance). When connectivity is restored to
+# all instances, the alarm is cleared. Alarms are issued here vs. the Monit
+# DSL to avoid retransmissions.
 #
 # If the local instance is not running, nodetool will fail. In that case
 # we do not issue an alarm and return a good status. The Clearwater pro-
@@ -51,10 +52,11 @@
 alarm_state_file="/tmp/.cassandra_ring_alarm_issued"
 
 
-# Return state of Cassandra ring, 0 if all nodes are up, 1 if one or more
-# nodes are down. 
+# Return state of Cassandra ring, 0 if all nodes are up, otherwise the 
+# count of nodes that are down. 
 ring_state()
 {
+    local state=0
     # Run nodetool to get the status of nodes in the ring, if successful
     # continue to check node status, otherwise return 0 (local Cassandra
     # failure is not considered a ring error). 
@@ -63,20 +65,20 @@ ring_state()
         # Look through nodetool output for status lines. These begin
         # with two uppercase characters, indicating Status and State,
         # followed by whitespace. The first character is what we are
-        # interested in: U = Up status, D = Down status. If any line
-        # indicates a node is down return a 1, otherwise 0.
+        # interested in: U = Up status, D = Down status. 
         local state_regex="^([UD])[NLJM]\s+.*"
         IFS=$'\n'
         for line in $out
         do
             if [[ $line =~ $state_regex ]] ; then
                 if [ "${BASH_REMATCH[1]}" == "D" ] ; then
-                   return 1
+                    # Accumulate the count of down nodes for return.
+                    let state+=1
                 fi
             fi
         done
     fi
-    return 0
+    return $state
 }
 
 
@@ -89,11 +91,20 @@ check_clear_alarm()
 }
 
 
-check_issue_alarm()
+check_issue_major_alarm()
 {
-    if [ ! -f $alarm_state_file ] ; then
-        touch $alarm_state_file
+    if [ ! -f $alarm_state_file ] || [ `cat $alarm_state_file` != "major" ] ; then
+        echo "major" > $alarm_state_file
         /usr/share/clearwater/bin/issue_alarm.py "monit" "4001.4"
+    fi
+}
+
+
+check_issue_critial_alarm()
+{
+    if [ ! -f $alarm_state_file ] || [ `cat $alarm_state_file` != "critical" ] ; then
+        echo "critical" > $alarm_state_file
+        /usr/share/clearwater/bin/issue_alarm.py "monit" "4001.3"
     fi
 }
 
@@ -101,10 +112,14 @@ check_issue_alarm()
 ring_state
 state=$? 
 
+echo $state
+
 if [ "$state" = 0 ] ; then
     check_clear_alarm
+elif [ "$state" = 1 ] ; then
+    check_issue_major_alarm
 else
-    check_issue_alarm
+    check_issue_critial_alarm
 fi
 
 exit $state
