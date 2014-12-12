@@ -18,11 +18,6 @@ check process cassandra pidfile /var/run/cassandra.pid
   stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
   restart program  = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra restart'"
 
-  if failed host localhost port 9160 type TCP
-     with timeout 15 seconds
-     for 6 times within 6 cycles
-     then restart
-
   if uptime < 30 seconds
      then exec "/bin/true"
      else if succeeded then exec "/usr/share/clearwater/bin/issue_alarm.py monit 4000.1"
