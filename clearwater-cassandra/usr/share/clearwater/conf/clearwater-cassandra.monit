@@ -34,6 +34,22 @@
 
 # Check the Cassandra process.
 
+# Monitor the service's PID file and memory use.
+check process cassandra with pidfile /var/run/cassandra.pid
+
+  start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra start'"
+  stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
+  restart program  = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra restart'"
+
+  # Check the service's resource usage, and stop the process if it's too high. 
+  # Monit will raise an alarm when it restarts the process
+  if memory > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
+
+  # Clear any alarms if the process has been running for 30 seconds
+  if uptime < 30 seconds
+     then exec "/bin/true"
+     else if succeeded then exec "/usr/share/clearwater/bin/issue_alarm.py monit 4000.1"
+
 # Monitor connectivity to Cassandra ring nodes. If connectivity is lost to
 # any node issue an alarm, otherwise clear it (alarm handling is done in
 # the check script to avoid unnecessary retransmissions). Only check every
@@ -47,20 +63,3 @@ check program poll_cassandra_ring with path "/usr/share/clearwater/bin/poll_cass
 check program poll_cassandra with path "/usr/share/clearwater/bin/poll_cassandra.sh"
   depends on cassandra
   if status != 0 for 2 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
-
-# Monitor the service's PID file, CPU and memory use.
-check process cassandra with pidfile /var/run/cassandra.pid
-
-  start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra start'"
-  stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
-  restart program  = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra restart'"
-
-  # Check the service's resource usage, and stop the process if it's too high. 
-  # Monit will raise an alarm when it restarts the process
-  if cpu > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
-  if memory > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
-
-  # Clear any alarms if the process has been running for 30 seconds
-  if uptime < 30 seconds
-     then exec "/bin/true"
-     else if succeeded then exec "/usr/share/clearwater/bin/issue_alarm.py monit 4000.1"
