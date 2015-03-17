@@ -35,6 +35,7 @@
 # as those licenses appear in the file LICENSE-OPENSSL.
 
 # This script polls a cassandra process and check whether it is healthy by checking
-# that the 9160 port is open.
-/usr/share/clearwater/bin/poll-tcp 9160
+# that the 9160 port is open at cassandra_hostname.
+. /etc/clearwater/config
+/usr/share/clearwater/bin/poll-tcp 9160 $cassandra_hostname
 exit $?
