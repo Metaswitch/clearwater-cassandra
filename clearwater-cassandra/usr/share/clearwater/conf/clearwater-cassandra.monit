@@ -35,7 +35,7 @@
 # Check the Cassandra process.
 
 # Monitor the service's PID file and memory use.
-check process cassandra with pidfile /var/run/cassandra.pid
+check process cassandra with pidfile /var/run/cassandra/cassandra.pid
 
   start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra start'"
   stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
