@@ -35,7 +35,8 @@
 # Check the Cassandra process.
 
 # Monitor the service's PID file and memory use.
-check process cassandra with pidfile /var/run/cassandra/cassandra.pid
+check process cassandra_process with pidfile /var/run/cassandra/cassandra.pid
+  group cassandra
 
   start program    = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra start'"
   stop program     = "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
@@ -55,11 +56,13 @@ check process cassandra with pidfile /var/run/cassandra/cassandra.pid
 # the check script to avoid unnecessary retransmissions). Only check every
 # 60 seconds due to overhead of running nodetool.
 check program poll_cassandra_ring with path "/usr/share/clearwater/bin/poll_cassandra_ring.sh" every 6 cycles
-  depends on cassandra
+  group cassandra
+  depends on cassandra_process
   if status != 0 then alert
 
 # Check that cassandra is listening on 9160. This depends on the cassandra process (and so won't run
 # unless the cassandra process is running)
 check program poll_cassandra with path "/usr/share/clearwater/bin/poll_cassandra.sh"
-  depends on cassandra
+  group cassandra
+  depends on cassandra_process
   if status != 0 for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
