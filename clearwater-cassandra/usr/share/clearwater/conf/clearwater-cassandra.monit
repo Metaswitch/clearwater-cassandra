@@ -62,7 +62,8 @@ check program poll_cassandra_ring with path "/usr/share/clearwater/bin/poll_cass
 
 # Check that cassandra is listening on 9160. This depends on the cassandra process (and so won't run
 # unless the cassandra process is running)
-check program poll_cassandra with path "/usr/share/clearwater/bin/poll_cassandra.sh"
-  group cassandra
-  depends on cassandra_process
-  if status != 0 for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
+# Commenting out while we fix etcd issues
+#check program poll_cassandra with path "/usr/share/clearwater/bin/poll_cassandra.sh"
+#  group cassandra
+#  depends on cassandra_process
+#  if status != 0 for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
