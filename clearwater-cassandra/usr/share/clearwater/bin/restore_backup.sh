@@ -96,7 +96,7 @@ fi
 echo "Restoring backup for keyspace $KEYSPACE..."
 
 # Stop monit from restarting Cassandra while we restore
-monit unmonitor cassandra
+monit unmonitor -g cassandra
 service cassandra stop
 
 echo "Clearing commitlog..."
@@ -115,4 +115,4 @@ do
 done
 
 service cassandra start
-monit monitor cassandra
+monit monitor -g cassandra
