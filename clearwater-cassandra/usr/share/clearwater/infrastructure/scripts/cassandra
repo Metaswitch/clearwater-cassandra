@@ -36,20 +36,23 @@
 
 . /etc/clearwater/config
 
-[ -z $signaling_namespace ] || namespace_prefix="ip netns exec $signaling_namespace "
-
-TEMP=$(mktemp -t cassandra-env.sh.XXXXXX) || exit 1
-
-cat /etc/cassandra/cassandra-env.sh | grep -v "# clearwater-infrastructure" > $TEMP
-echo "JSVC=\"$namespace_prefix\$JSVC\" # clearwater-infrastructure" >> $TEMP
-
-diff /etc/cassandra/cassandra-env.sh $TEMP > /dev/null
-rc=$?
-if [[ $rc != 0 ]]
+if [ -f $signaling_namespace ]
 then
-  # File has changed, need to restart cassandra to pick up the change.
-  cp $TEMP /etc/cassandra/cassandra-env.sh
-  service cassandra stop
-fi
+  # If the signaling_namespace parameter is set then add it to the 
+  # start-stop-daemon call (overwriting any previous namespace)
+  namespace_prefix="ip netns exec $signaling_namespace "
+  TEMP=$(mktemp -t cassandra.XXXXXX) || exit 1
+  cat /etc/init.d/cassandra > $TEMP
+  sed -i "s/^.*start-stop-daemon/$namespace_prefix start-stop-daemon/" $TEMP
 
-rm $TEMP
+  diff /etc/init.d/cassandra $TEMP > /dev/null
+  rc=$?
+  if [[ $rc != 0 ]]
+  then
+    # File has changed, need to restart cassandra to pick up the change.
+    cp $TEMP /etc/init.d/cassandra
+    service cassandra stop
+  fi
+
+  rm $TEMP
+fi
