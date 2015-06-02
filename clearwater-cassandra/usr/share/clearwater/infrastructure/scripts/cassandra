@@ -36,7 +36,7 @@
 
 . /etc/clearwater/config
 
-if [ -f $signaling_namespace ]
+if [[ -n $signaling_namespace ]]
 then
   # If the signaling_namespace parameter is set then add it to the 
   # start-stop-daemon call (overwriting any previous namespace)
