@@ -55,14 +55,21 @@ check process cassandra_process with pidfile /var/run/cassandra/cassandra.pid
 # any node issue an alarm, otherwise clear it (alarm handling is done in
 # the check script to avoid unnecessary retransmissions). Only check every
 # 60 seconds due to overhead of running nodetool.
-check program poll_cassandra_ring with path "/usr/share/clearwater/bin/poll_cassandra_ring.sh" every 6 cycles
-  group cassandra
-  depends on cassandra_process
-  if status != 0 then alert
+#
+# Currently disabled due to memory leaks when running `nodetool status` on
+# Cassandra 2.0.
+#
+#check program poll_cassandra_ring with path "/usr/share/clearwater/bin/poll_cassandra_ring.sh" every 6 cycles
+#  group cassandra
+#  depends on cassandra
+#  if status != 0 then alert
 
-# Check that cassandra is listening on 9160. This depends on the cassandra process (and so won't run
-# unless the cassandra process is running)
-# Commenting out while we fix etcd issues
+# Check that cassandra is listening on 9160. This depends on the cassandra
+# process (and so won't run unless the cassandra process is running).
+#
+# Currently disabled because Cassandra doesn't boot at a reliable enough speed
+# to allow sensible monitoring.
+#
 #check program poll_cassandra with path "/usr/share/clearwater/bin/poll_cassandra.sh"
 #  group cassandra
 #  depends on cassandra_process
