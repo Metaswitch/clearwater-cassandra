@@ -42,15 +42,18 @@ then
   # start-stop-daemon call (overwriting any previous namespace)
   namespace_prefix="ip netns exec $signaling_namespace "
   TEMP=$(mktemp -t cassandra.XXXXXX) || exit 1
-  sed "s/^.*start-stop-daemon/$namespace_prefix start-stop-daemon/" </etc/init.d/cassandra >$TEMP
-
-  diff /etc/init.d/cassandra $TEMP > /dev/null
-  if [[ $? != 0 ]]
-  then
-    # File has changed, need to restart cassandra to pick up the change.
-    cp $TEMP /etc/init.d/cassandra
-    service cassandra stop
-  fi
-
-  rm $TEMP
+  sed "s/^.*start-stop-daemon/    $namespace_prefix start-stop-daemon/" </etc/init.d/cassandra >$TEMP
+else
+  TEMP=$(mktemp -t cassandra.XXXXXX) || exit 1
+  sed "s/^.*start-stop-daemon/    start-stop-daemon/" </etc/init.d/cassandra >$TEMP
 fi
+
+diff /etc/init.d/cassandra $TEMP > /dev/null
+if [[ $? != 0 ]]
+then
+  # File has changed, need to restart cassandra to pick up the change.
+  cp $TEMP /etc/init.d/cassandra
+  service cassandra stop
+fi
+
+rm $TEMP
