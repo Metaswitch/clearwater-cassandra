@@ -44,7 +44,7 @@ check process cassandra_process with pidfile /var/run/cassandra/cassandra.pid
 
   # Check the service's resource usage, and stop the process if it's too high. 
   # Monit will raise an alarm when it restarts the process
-  if memory > 80% for 6 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
+  if memory > 90% for 12 cycles then exec "/bin/bash -c '/usr/share/clearwater/bin/issue_alarm.py monit 4000.3; /etc/init.d/cassandra stop'"
 
   # Clear any alarms if the process has been running for 30 seconds
   if uptime < 30 seconds
