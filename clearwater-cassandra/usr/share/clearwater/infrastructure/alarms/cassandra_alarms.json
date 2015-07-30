@@ -1,0 +1,43 @@
+{
+    "alarms": [
+        {
+            "index": 4000,
+            "name": "CASSANDRA_PROCESS_FAIL",
+            "cause": "SOFTWARE_ERROR",
+            "levels": [
+                {
+                    "severity": "CLEARED",
+                    "details": "The Cassandra process has been restored to normal operation.",
+                    "description": "Cassandra: Process failure cleared"
+                },
+                {
+                    "severity": "CRITICAL",
+                    "details": "Monit has detected that the Cassandra process has failed. A restart will automatically be attempted. If this alarm does not clear, the Cassandra process may have been stopped or an unrecoverable failure may have occurred.",
+                    "description": "Cassandra: Process failure"
+                }
+            ]
+        },
+        {
+            "index": 4001,
+            "cause": "UNDERLYING_RESOURCE_UNAVAILABLE",
+            "name": "CASSANDRA_RING_NODE_FAIL",
+            "levels": [
+                {
+                    "severity": "CLEARED",
+                    "details": "All Cassandra ring nodes have been restored to normal operation.",
+                    "description": "Cassandra: Ring node error/failure cleared"
+                },
+                {
+                    "severity": "MAJOR",
+                    "details": "Cassandra is unable to contact one of its ring nodes. It will periodically attempt to reconnect. If this alarm does not clear, ensure that all Cassandra instances are operational and verify network connectivity to reporting nodes.",
+                    "description": "Cassandra: Ring node redundancy error"
+                },
+                {
+                    "severity": "CRITICAL",
+                    "details": "Cassandra is unable to contact more than one of its ring nodes. It will periodically attempt to reconnect. If this alarm does not clear, ensure that all Cassandra instances are operational and verify network connectivity to reporting nodes.",
+                    "description": "Cassandra: Ring node redundancy failure"
+                }
+            ]
+        }
+    ]
+}
