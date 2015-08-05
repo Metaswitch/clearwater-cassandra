@@ -36,11 +36,10 @@
 
 # This script polls a cassandra process and check whether it is healthy by checking
 # that the 9160 port is open at cassandra_hostname. This script should be
-# run in the signaling namespace if set
+# run in the signaling namespace if set.
 
 . /etc/clearwater/config
-. /usr/share/clearwater/bin/run-in-signaling-namespace
 
 [ ! -z "$cassandra_hostname" ] || cassandra_hostname="127.0.0.1"
-$namespace_prefix /usr/share/clearwater/bin/poll-tcp 9160 $cassandra_hostname
+/usr/share/clearwater/bin/run-in-signaling-namespace /usr/share/clearwater/bin/poll-tcp 9160 $cassandra_hostname
 exit $?
