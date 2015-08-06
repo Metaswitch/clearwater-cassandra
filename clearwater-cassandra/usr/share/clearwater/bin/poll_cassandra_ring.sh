@@ -60,7 +60,7 @@ ring_state()
     # Run nodetool to get the status of nodes in the ring, if successful
     # continue to check node status, otherwise return 0 (local Cassandra
     # failure is not considered a ring error). 
-    local out=`nice -n 19 nodetool status 2> /dev/null`
+    local out=`nice -n 19 /usr/share/clearwater/bin/run-in-signaling-namespace nodetool status 2> /dev/null`
     if [ "$?" = 0 ] ; then
         # Look through nodetool output for status lines. These begin
         # with two uppercase characters, indicating Status and State,
