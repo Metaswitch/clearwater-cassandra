@@ -42,4 +42,9 @@
 
 [ ! -z "$cassandra_hostname" ] || cassandra_hostname="127.0.0.1"
 /usr/share/clearwater/bin/run-in-signaling-namespace /usr/share/clearwater/bin/poll-tcp 9160 $cassandra_hostname
-exit $?
+rc=$?
+if [[ $rc != 0 ]]
+then
+  nodetool enablethrift
+fi
+exit $rc
