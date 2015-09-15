@@ -34,6 +34,15 @@
 # under which the OpenSSL Project distributes the OpenSSL toolkit software,
 # as those licenses appear in the file LICENSE-OPENSSL.
 
+# Get how long the cassandra process has been running. If this is less than
+# 2 minutes, then don't poll cassandra (as it may not be up yet).
+# Getting the uptime can fail if the cassandra process fails - this is caught
+# by the monit script.
+value=$( ps -p $( cat /var/run/cassandra/cassandra.pid ) -o etimes=)
+if [ $? == 0 ] && [ "$value" -lt 1200 ]; then
+  exit 0
+fi
+
 # This script polls a cassandra process and check whether it is healthy by checking
 # that the 9160 port is open at cassandra_hostname. This script should be
 # run in the signaling namespace if set.
