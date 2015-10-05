@@ -40,7 +40,7 @@
 # Getting the uptime can fail if the cassandra process fails - this is caught
 # by the monit script.
 
-[ $# -le 1 ] || { echo "Usage: poll_cassandra [--no_grace_period] (defaults to a two minute grace period)" >&2 ; exit 2 ; }
+[ $# -le 1 ] || { echo "Usage: poll_cassandra [--no-grace-period] (defaults to a two minute grace period)" >&2 ; exit 2 ; }
 
 if [ -z "$1" ]; then
   value=$( ps -p $( cat /var/run/cassandra/cassandra.pid ) -o etimes=)
