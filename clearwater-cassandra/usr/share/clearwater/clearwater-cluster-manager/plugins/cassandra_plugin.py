@@ -49,7 +49,8 @@ def join_cassandra_cluster(cluster_view,
                            cassandra_yaml_file,
                            cassandra_topology_file,
                            ip,
-                           site_name):
+                           site_name,
+                           remote_seeds):
     seeds_list = []
 
     for seed, state in cluster_view.items():
@@ -62,6 +63,7 @@ def join_cassandra_cluster(cluster_view,
             if (state == constants.JOINING_ACKNOWLEDGED_CHANGE or
                 state == constants.JOINING_CONFIG_CHANGED):
                 seeds_list.append(seed)
+        seeds_list.append(remote_seeds)
 
     if len(seeds_list) > 0:
         seeds_list_str = ','.join(map(str, seeds_list))
@@ -158,6 +160,7 @@ class CassandraPlugin(SynchroniserPluginBase):
     def __init__(self, params):
         self._ip = params.ip
         self._local_site = params.local_site
+        self._remote_seeds = params.remote_cassandra_seeds
         self._sig_namespace = params.signaling_namespace
         self._key = "/{}/{}/clustering/cassandra".format(params.etcd_key, params.etcd_cluster_key)
         _log.debug("Raising Cassandra not-clustered alarm")
@@ -178,7 +181,8 @@ class CassandraPlugin(SynchroniserPluginBase):
                                "/etc/cassandra/cassandra.yaml",
                                "/etc/cassandra/cassandra-rackdc.properties",
                                self._ip,
-                               self._local_site)
+                               self._local_site,
+                               self._remote_seeds)
 
         if (self._ip == sorted(cluster_view.keys())[0]):
             _log.debug("Adding schemas")
