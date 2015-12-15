@@ -63,7 +63,7 @@ def join_cassandra_cluster(cluster_view,
             if (state == constants.JOINING_ACKNOWLEDGED_CHANGE or
                 state == constants.JOINING_CONFIG_CHANGED):
                 seeds_list.append(seed)
-        seeds_list.append(remote_seeds)
+        seeds_list = seeds_list + remote_seeds
 
     if len(seeds_list) > 0:
         seeds_list_str = ','.join(map(str, seeds_list))
