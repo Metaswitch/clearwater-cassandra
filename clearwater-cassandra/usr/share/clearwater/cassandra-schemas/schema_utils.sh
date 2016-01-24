@@ -35,9 +35,12 @@
 . /usr/share/clearwater/cassandra-schemas/replication_string.sh
 
 function quit_if_no_cassandra() {
-cassandra_installed=$(dpkg-query -W -f='${Status}\n' cassandra 2> /dev/null | grep -q "install ok installed")
 
-if [[ ! $cassandra_installed ]]
+dpkg-query -W -f='${Status}\n' cassandra 2> /dev/null | grep -q "install ok installed"
+
+cassandra_installed_rc=$?
+
+if [[ $cassandra_installed_rc -ne 0 ]]
 then
   echo "Cassandra is not installed yet, skipping schema addition for now"
   exit 0
