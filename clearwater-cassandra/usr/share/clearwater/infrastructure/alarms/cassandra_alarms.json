@@ -8,12 +8,18 @@
                 {
                     "severity": "CLEARED",
                     "details": "The Cassandra process has been restored to normal operation.",
-                    "description": "Cassandra: Process failure cleared"
+                    "description": "Cassandra: Process failure cleared",
+                    "cause": "The Cassandra process has been restored to normal operation. The previously issued alarm has been cleared.",
+                    "effect": "Local Cassandra clients are able to read or write from the Cassandra database.",
+                    "action": "No action."
                 },
                 {
                     "severity": "CRITICAL",
                     "details": "Monit has detected that the Cassandra process has failed. A restart will automatically be attempted. If this alarm does not clear, the Cassandra process may have been stopped or an unrecoverable failure may have occurred.",
-                    "description": "Cassandra: Process failure"
+                    "description": "Cassandra: Process failure",
+                    "cause": "The system has detected that the Cassandra process has failed.",
+                    "effect": "Local Cassandra clients are unable to read or write from the Cassandra database. Check if other processes have raised any alarms to see the service affect (if any) of this.",
+                    "action": "Monitor for the alarm to clear and confirm the system is operating normally. If the Cassandra process fails to return to service then contact your support representative."
                 }
             ]
         },
@@ -25,17 +31,26 @@
                 {
                     "severity": "CLEARED",
                     "details": "All Cassandra ring nodes have been restored to normal operation.",
-                    "description": "Cassandra: Ring node error/failure cleared"
+                    "description": "Cassandra: Ring node error/failure cleared",
+                    "cause": "The Cassandra cluster has been restored to normal operation. The previously issued alarm has been cleared.",
+                    "effect": "The Cassandra cluster's data resiliency has been fully restored.",
+                    "action": "No action."
                 },
                 {
                     "severity": "MAJOR",
                     "details": "Cassandra is unable to contact one of its ring nodes. It will periodically attempt to reconnect. If this alarm does not clear, ensure that all Cassandra instances are operational and verify network connectivity to reporting nodes.",
-                    "description": "Cassandra: Ring node redundancy error"
+                    "description": "Cassandra: Ring node redundancy error",
+                    "cause": "A Cassandra node in the cluster has failed, or has become unreachable.",
+                    "effect": "The Cassandra cluster's data resiliency has been reduced.",
+                    "action": "Check for a Cassandra process failure alarm in the cluster. Check that all Cassandra processes in the cluster are contactable. If the alarm fails to clear, contact your support representative."
                 },
                 {
                     "severity": "CRITICAL",
                     "details": "Cassandra is unable to contact more than one of its ring nodes. It will periodically attempt to reconnect. If this alarm does not clear, ensure that all Cassandra instances are operational and verify network connectivity to reporting nodes.",
-                    "description": "Cassandra: Ring node redundancy failure"
+                    "description": "Cassandra: Ring node redundancy failure",
+                    "cause": "Multiple Cassandra nodes in the cluster have failed, or have become unreachable.",
+                    "effect": "A subset of data in the Cassandra cluster is unavailable for read or write.",
+                    "action": "Check for Cassandra process failure alarms in the cluster. Check that all Cassandra processes in the cluster are contactable. If the alarm fails to clear, contact your support representative."
                 }
             ]
         }
