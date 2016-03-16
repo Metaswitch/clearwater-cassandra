@@ -60,11 +60,11 @@ check process cassandra_process with pidfile /var/run/cassandra/cassandra.pid
 #  if status != 0 then alert
 
 # Clear any alarms if the process has been running long enough.
-check program cassandra_uptime with path "/usr/share/clearwater/bin/check-uptime /var/run/cassandra/cassandra.pid"
+check program cassandra_uptime with path "/usr/share/clearwater/bin/check-uptime /var/run/cassandra/cassandra.pid monit 4000.1"
   group cassandra
   depends on cassandra_process
   every 3 cycles
-  if status = 0 then exec "/usr/share/clearwater/bin/issue_alarm.py monit 4000.1"
+  if status != 0 then alert
 
 # Check that cassandra is listening on 9160. This depends on the cassandra
 # process (and so won't run unless the cassandra process is running).
