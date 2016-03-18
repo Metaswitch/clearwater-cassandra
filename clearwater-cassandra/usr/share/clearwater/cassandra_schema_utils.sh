@@ -40,7 +40,7 @@ dpkg-query -W -f='${Status}\n' cassandra 2> /dev/null | grep -q "install ok inst
 
 cassandra_installed_rc=$?
 
-if [[ $cassandra_installed_rc -ne 0 ]]
+if [ $cassandra_installed_rc -ne 0 ]  || [ ! -e /etc/cassandra/cassandra.yaml ]
 then
   echo "Cassandra is not installed yet, skipping schema addition for now"
   exit 0
