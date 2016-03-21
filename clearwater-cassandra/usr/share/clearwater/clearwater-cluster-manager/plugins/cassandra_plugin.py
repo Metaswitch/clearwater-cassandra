@@ -46,36 +46,83 @@ import ipaddress
 
 _log = logging.getLogger("cassandra_plugin")
 
-def join_cassandra_cluster(cluster_view,
-                           cassandra_yaml_file,
-                           cassandra_topology_file,
-                           ip,
-                           site_name):
-    seeds_list = []
-    ip_is_v6 = (ipaddress.ip_address(ip).version == 6)
 
-    for seed, state in cluster_view.items():
-        if (state == constants.NORMAL_ACKNOWLEDGED_CHANGE or
-            state == constants.NORMAL_CONFIG_CHANGED):
-            seeds_list.append(seed)
+class CassandraPlugin(SynchroniserPluginBase):
 
-    if len(seeds_list) == 0:
-        for seed, state in cluster_view.items():
-            if (state == constants.JOINING_ACKNOWLEDGED_CHANGE or
-                state == constants.JOINING_CONFIG_CHANGED):
-                seeds_list.append(seed)
+    CASSANDRA_YAML_TEMPLATE = "/usr/share/clearwater/cassandra/cassandra.yaml.template"
+    CASSANDRA_YAML_FILE = "/etc/cassandra/cassandra.yaml"
+    CASSANDRA_TOPOLOGY_FILE = "/etc/cassandra/cassandra-rackdc.properties"
 
-    if len(seeds_list) > 0:
+    def __init__(self, params):
+        self._ip = params.ip
+        self._local_site = params.local_site
+        self._sig_namespace = params.signaling_namespace
+        self._key = "/{}/{}/clustering/cassandra".format(params.etcd_key, params.etcd_cluster_key)
+        self._clustering_alarm = alarm_manager.get_alarm(
+            'cluster-manager',
+            alarm_constants.CASSANDRA_NOT_YET_CLUSTERED)
+        pdlogs.NOT_YET_CLUSTERED_ALARM.log(cluster_desc=self.cluster_description())
+
+    # Interface-defined plugin functions
+
+    def key(self):
+        return self._key
+
+    def cluster_description(self):
+        return "Cassandra cluster"
+
+    def on_startup(self, cluster_view):
+        if os.path.exists("/etc/clearwater/force_cassandra_yaml_refresh"):
+            seeds = self.get_seeds(cluster_view)
+            if seeds:
+                self.write_new_cassandra_config(seeds)
+
+    def on_cluster_changing(self, cluster_view):
+        _log.debug("Raising Cassandra not-clustered alarm")
+        self._clustering_alarm.set()
+
+    def on_joining_cluster(self, cluster_view):
+        _log.debug("Raising Cassandra not-clustered alarm")
+        self._clustering_alarm.set()
+        self.join_cassandra_cluster(cluster_view)
+
+        if (self._ip == sorted(cluster_view.keys())[0]):
+            _log.debug("Adding schemas")
+            run_command("/usr/share/clearwater/infrastructure/scripts/cassandra_schemas/run_cassandra_schemas")
+
+    def on_new_cluster_config_ready(self, cluster_view):
+        _log.debug("Raising Cassandra not-clustered alarm")
+        self._clustering_alarm.set()
+
+    def on_stable_cluster(self, cluster_view):
+        _log.debug("Clearing Cassandra not-clustered alarm")
+        self._clustering_alarm.clear()
+
+    def on_leaving_cluster(self, cluster_view):
+        decommission_alarm = alarm_manager.get_alarm(
+            'cluster-manager',
+            alarm_constants.CASSANDRA_NOT_YET_DECOMMISSIONED)
+        decommission_alarm.set()
+        self.leave_cassandra_cluster()
+        decommission_alarm.clear()
+
+    def files(self):
+        return ["/etc/cassandra/cassandra.yaml"]
+
+    # Specific methods for handling Cassandra
+
+    def write_new_cassandra_config(self, seeds_list, destructive_restart=False):
+        ip_is_v6 = (ipaddress.ip_address(self._ip).version == 6)
         seeds_list_str = ','.join(map(str, seeds_list))
         _log.info("Cassandra seeds list is {}".format(seeds_list_str))
 
-        # Read cassandra.yaml.
-        with open(cassandra_yaml_file) as f:
+        # Read cassandra.yaml template.
+        with open(self.CASSANDRA_YAML_TEMPLATE) as f:
             doc = yaml.load(f)
 
         # Fill in the correct listen_address and seeds values in the yaml
         # document.
-        doc["listen_address"] = ip
+        doc["listen_address"] = self._ip
 
         # Set the thrift listen address to the IPv4 or IPv6 loopback address
         # as appropriate. Note we can't use 127.0.0.1 in both cases because in
@@ -101,7 +148,7 @@ def join_cassandra_cluster(cluster_view,
         try:
             # We want the timeout value to be 4/5ths the maximum acceptable time
             # of a HTTP request (which is 5 * target latency)
-            timeout = (int(latency) / 1000 ) * 4
+            timeout = (int(latency) / 1000) * 4
         except ValueError:
             timeout = 400
 
@@ -109,130 +156,90 @@ def join_cassandra_cluster(cluster_view,
 
         # Write back to cassandra.yaml.
         contents = WARNING_HEADER + "\n" + yaml.dump(doc)
-        topology = WARNING_HEADER + "\n" + "dc={}\nrack=RAC1\n".format(site_name)
+        topology = WARNING_HEADER + "\n" + "dc={}\nrack=RAC1\n".format(self._local_site)
 
-        safely_write(cassandra_yaml_file, contents)
-        safely_write(cassandra_topology_file, topology)
+        safely_write(self.CASSANDRA_YAML_FILE, contents)
+        safely_write(self.CASSANDRA_TOPOLOGY_FILE, topology)
 
         # Restart Cassandra and make sure it picks up the new list of seeds.
         _log.debug("Restarting Cassandra")
         run_command("monit unmonitor -g cassandra")
         run_command("service cassandra stop")
         run_command("killall $(cat /var/lib/cassandra/cassandra.pid)", log_error=False)
-        run_command("rm -rf /var/lib/cassandra/")
-        run_command("mkdir -m 755 /var/lib/cassandra")
-        run_command("chown -R cassandra /var/lib/cassandra")
 
-        # IF we're using IPv6 addresses we have to tell the JVM not to prefer
-        # IPv4 addresses (otherwise cassandra won't be able to start). This is
-        # controlled via the preferIPv4Stack option in cassandra-env.sh. If
-        # we're using IPv6 we comment this line out, otherwise we uncomment it
-        # back in.
-        prefer_ipv4_stack_regex = "JVM_OPTS[[:space:]]*=[[:space:]]*.*[.]preferIPv4Stack=true.*"
-        if ip_is_v6:
-            run_command("sed -i.bak 's/^\\(" + prefer_ipv4_stack_regex + "\\)$/#\\1/' /etc/cassandra/cassandra-env.sh")
+        if destructive_restart:
+            run_command("rm -rf /var/lib/cassandra/")
+            run_command("mkdir -m 755 /var/lib/cassandra")
+            run_command("chown -R cassandra /var/lib/cassandra")
+
+        self.start_cassandra()
+        os.remove("/etc/clearwater/force_cassandra_yaml_refresh")
+
+    def get_seeds(self, cluster_view):
+        seeds_list = []
+
+        for seed, state in cluster_view.items():
+            if (state == constants.NORMAL_ACKNOWLEDGED_CHANGE or
+                state == constants.NORMAL_CONFIG_CHANGED):
+                seeds_list.append(seed)
+
+        if len(seeds_list) == 0:
+            for seed, state in cluster_view.items():
+                if (state == constants.JOINING_ACKNOWLEDGED_CHANGE or
+                    state == constants.JOINING_CONFIG_CHANGED):
+                    seeds_list.append(seed)
+        return seeds_list
+
+    def join_cassandra_cluster(self, cluster_view):
+        seeds_list = self.get_seeds(cluster_view)
+        if len(seeds_list) > 0:
+            self.write_new_cassandra_config(seeds_list,
+                                            destructive_restart=True)
+
+            _log.debug("Cassandra node successfully clustered")
         else:
-            run_command("sed -i.bak 's/^\\#(" + prefer_ipv4_stack_regex + "\\)$/\\1/' /etc/cassandra/cassandra-env.sh")
+            # Something has gone wrong - the local node should be WAITING_TO_JOIN in
+            # etcd (at the very least).
+            _log.warning("No Cassandra cluster defined in etcd - unable to join")
+            pass
 
-        start_cassandra()
+    def can_contact_cassandra(self):
+        if os.path.exists("/var/run/cassandra/cassandra.pid"):
+            rc = run_command("/usr/share/clearwater/bin/poll_cassandra.sh --no-grace-period")
+            return (rc == 0)
+        else:
+            # Cassandra isn't even running, let alone contactable
+            return False
 
-        _log.debug("Cassandra node successfully clustered")
+    def leave_cassandra_cluster(self):
+        # We need Cassandra to be running so that we can connect on port 9160 and
+        # decommission it. Check if we can connect on port 9160.
+        if not self.can_contact_cassandra():
+            self.start_cassandra()
 
-    else:
-        # Something has gone wrong - the local node should be WAITING_TO_JOIN in
-        # etcd (at the very least).
-        _log.warning("No Cassandra cluster defined in etcd - unable to join")
-        pass
+        run_command("monit unmonitor -g cassandra")
+        run_command("nodetool decommission", self._sig_namespace)
 
-def can_contact_cassandra():
-    if os.path.exists("/var/run/cassandra/cassandra.pid"):
-        rc = run_command("/usr/share/clearwater/bin/poll_cassandra.sh --no-grace-period")
-        return (rc == 0)
-    else:
-        # Cassandra isn't even running, let alone contactable
-        return False
+    def start_cassandra(self):
+        cassandra_not_monitored = True
 
-def leave_cassandra_cluster(namespace=None):
-    # We need Cassandra to be running so that we can connect on port 9160 and
-    # decommission it. Check if we can connect on port 9160.
-    if not can_contact_cassandra():
-        start_cassandra()
+        # Wait until we can connect on port 9160 - i.e. Cassandra is running.
+        while True:
+            if cassandra_not_monitored:
+                # The monit command can fail because monit is still processing
+                # the unmonitor command from before (even though it has
+                # finished unmonitoring cassandra)
+                rc = run_command("monit monitor -g cassandra")
+                cassandra_not_monitored = (rc != 0)
+            elif self.can_contact_cassandra():
+                break
 
-    run_command("monit unmonitor -g cassandra")
-    run_command("nodetool decommission", namespace)
+            # Sleep so we don't tight loop
+            time.sleep(1)
 
-
-def start_cassandra():
-    cassandra_not_monitored = True
-
-    # Wait until we can connect on port 9160 - i.e. Cassandra is running.
-    while True:
-        if cassandra_not_monitored:
-            # The monit command can fail because monit is still processing
-            # the unmonitor command from before (even though it has
-            # finished unmonitoring cassandra)
-            rc = run_command("monit monitor -g cassandra")
-            cassandra_not_monitored = (rc != 0)
-        elif can_contact_cassandra():
-            break
-
-        # Sleep so we don't tight loop
-        time.sleep(1)
-
-class CassandraPlugin(SynchroniserPluginBase):
-    def __init__(self, params):
-        self._ip = params.ip
-        self._local_site = params.local_site
-        self._sig_namespace = params.signaling_namespace
-        self._key = "/{}/{}/clustering/cassandra".format(params.etcd_key, params.etcd_cluster_key)
-        self._clustering_alarm = alarm_manager.get_alarm(
-            'cluster-manager',
-            alarm_constants.CASSANDRA_NOT_YET_CLUSTERED)
-        pdlogs.NOT_YET_CLUSTERED_ALARM.log(cluster_desc=self.cluster_description())
-
-    def key(self):
-        return self._key
-
-    def cluster_description(self):
-        return "Cassandra cluster"
-
-    def on_cluster_changing(self, cluster_view):
-        _log.debug("Raising Cassandra not-clustered alarm")
-        self._clustering_alarm.set()
-        pass
-
-    def on_joining_cluster(self, cluster_view):
-        _log.debug("Raising Cassandra not-clustered alarm")
-        self._clustering_alarm.set()
-        join_cassandra_cluster(cluster_view,
-                               "/etc/cassandra/cassandra.yaml",
-                               "/etc/cassandra/cassandra-rackdc.properties",
-                               self._ip,
-                               self._local_site)
-
-        if (self._ip == sorted(cluster_view.keys())[0]):
-            _log.debug("Adding schemas")
-            run_command("/usr/share/clearwater/infrastructure/scripts/cassandra_schemas/run_cassandra_schemas")
-
-    def on_new_cluster_config_ready(self, cluster_view):
-        _log.debug("Raising Cassandra not-clustered alarm")
-        self._clustering_alarm.set()
-        pass
-
-    def on_stable_cluster(self, cluster_view):
-        _log.debug("Clearing Cassandra not-clustered alarm")
-        self._clustering_alarm.clear()
-
-    def on_leaving_cluster(self, cluster_view):
-        decommission_alarm = alarm_manager.get_alarm(
-            'cluster-manager',
-            alarm_constants.CASSANDRA_NOT_YET_DECOMMISSIONED)
-        decommission_alarm.set()
-        leave_cassandra_cluster(self._sig_namespace)
-        decommission_alarm.clear()
-
-    def files(self):
-        return ["/etc/cassandra/cassandra.yaml"]
+        # Restart clearwater-infrastructure so any necessary schema creation
+        # scripts get run
+        run_command("sudo service clearwater-infrastructure restart")
 
 
 def load_as_plugin(params):

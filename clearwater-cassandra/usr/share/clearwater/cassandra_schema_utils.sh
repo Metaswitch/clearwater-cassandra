@@ -1,9 +1,7 @@
-#!/bin/bash
+#! /bin/bash
 
-# @file cassandra
-#
 # Project Clearwater - IMS in the Cloud
-# Copyright (C) 2013  Metaswitch Networks Ltd
+# Copyright (C) 2016 Metaswitch Networks Ltd
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -36,28 +34,34 @@
 
 . /etc/clearwater/config
 
-# If we're using IPv6 addresses we have to tell the JVM not to prefer
-# IPv4 addresses (otherwise cassandra won't be able to start). This is
-# controlled via the preferIPv4Stack option in cassandra-env.sh.
+# Create the common REPLICATION string to be used when creating Clearwater
+# Cassandra schemas. This file gets dotted in by the schema creation scripts.
+replication_str="{'class': 'SimpleStrategy', 'replication_factor': 2}"
 
-IPv6_TEMPLATE=/usr/share/clearwater/cassandra/cassandra-env-ipv6.sh
-IPv4_TEMPLATE=/usr/share/clearwater/cassandra/cassandra-env-ipv4.sh
-
-if /usr/share/clearwater/bin/is_address_ipv6.py $local_ip
+# If local_site_name and remote_site_names are set then this is a GR
+# deployment. Set the replication strategy to NetworkTopologyStrategy and
+# define the sites.
+if [ -n "$local_site_name" ] && [ -n "$remote_site_names" ]
 then
-  new_file=$IPv6_TEMPLATE
-else
-  new_file=$IPv4_TEMPLATE
+  IFS=',' read -a remote_site_names_array <<< "$remote_site_names"
+  replication_str="{'class': 'NetworkTopologyStrategy', '$local_site_name': 2"
+  for remote_site in "${remote_site_names_array[@]}"
+  do
+    # Set the replication factor for each site to 2.
+    replication_str+=", '$remote_site': 2"
+  done
+  replication_str+="}"
 fi
 
-if [[ -e /etc/cassandra/cassandra-env.sh &&
-      "$(readlink /etc/cassandra/cassandra-env.sh)" = $new_file ]]
-then
-  # File unchanged, do nothing
-  /bin/true
-else
-  ln -sf $new_file /etc/cassandra/cassandra-env.sh
-  # File has changed, need to restart cassandra to pick up the change.
-  service cassandra stop
-fi
+function quit_if_no_cassandra() {
 
+dpkg-query -W -f='${Status}\n' cassandra 2> /dev/null | grep -q "install ok installed"
+
+cassandra_installed_rc=$?
+
+if [ $cassandra_installed_rc -ne 0 ]  || [ ! -e /etc/cassandra/cassandra.yaml ]
+then
+  echo "Cassandra is not installed yet, skipping schema addition for now"
+  exit 0
+fi
+}
