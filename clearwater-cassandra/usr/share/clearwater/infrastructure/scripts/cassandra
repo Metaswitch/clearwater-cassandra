@@ -66,14 +66,16 @@ cat $TEMPLATE_FILE |\
   > $new_file
 
 if [[ -e /etc/cassandra/cassandra-env.sh &&
-  "$(md5sum /etc/cassandra/cassandra-env.sh)" = "$(md5sum $new_file)" ]]
+  "$(md5sum < /etc/cassandra/cassandra-env.sh)" = "$(md5sum < $new_file)" ]]
 then
   # File unchanged, do nothing
   /bin/true
 else
-  ln -sf $new_file /etc/cassandra/cassandra-env.sh
+  rm -f /etc/cassandra/cassandra-env.sh
+  cp $new_file /etc/cassandra/cassandra-env.sh
   # File has changed, need to restart cassandra to pick up the change.
   service cassandra stop
 fi
 
+chmod 0755 /etc/cassandra/cassandra-env.sh
 rm $new_file
