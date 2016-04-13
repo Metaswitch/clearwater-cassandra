@@ -61,8 +61,8 @@ then
 fi
 
 cat $TEMPLATE_FILE |\
-  sed "s/TEMPLATE_IPV4_SECTION/$TEMPLATE_IPV4_SECTION/" |\
-  sed "s/TEMPLATE_HEAPSIZE_SECTION/$TEMPLATE_HEAPSIZE_SECTION/"\
+  sed "s/<<<TEMPLATE_IPV4_SECTION>>>/$TEMPLATE_IPV4_SECTION/" |\
+  sed "s/<<<TEMPLATE_HEAPSIZE_SECTION>>>/$TEMPLATE_HEAPSIZE_SECTION/"\
   > $new_file
 
 if [[ -e /etc/cassandra/cassandra-env.sh &&
