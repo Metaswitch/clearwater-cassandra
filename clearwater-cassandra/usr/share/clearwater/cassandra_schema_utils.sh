@@ -44,7 +44,8 @@ replication_str="{'class': 'SimpleStrategy', 'replication_factor': $replication_
 
 # If local_site_name and remote_site_names are set then this is a GR
 # deployment. Set the replication strategy to NetworkTopologyStrategy and
-# define the sites.
+# define the sites. We never actually use remote_site_names at this time.
+remote_sites_names=""
 if [ -n "$local_site_name" ] && [ -n "$remote_site_names" ]
 then
   IFS=',' read -a remote_site_names_array <<< "$remote_site_names"
