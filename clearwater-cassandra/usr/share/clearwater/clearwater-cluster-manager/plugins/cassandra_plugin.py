@@ -155,25 +155,38 @@ class CassandraPlugin(SynchroniserPluginBase):
 
         doc["read_request_timeout_in_ms"] = timeout
 
-        # Write back to cassandra.yaml.
         contents = WARNING_HEADER + "\n" + yaml.dump(doc)
         topology = WARNING_HEADER + "\n" + "dc={}\nrack=RAC1\n".format(self._local_site)
 
-        safely_write(self.CASSANDRA_YAML_FILE, contents)
-        safely_write(self.CASSANDRA_TOPOLOGY_FILE, topology)
-
         # Restart Cassandra and make sure it picks up the new list of seeds.
-        _log.debug("Restarting Cassandra")
-        run_command("monit unmonitor -g cassandra")
-        run_command("service cassandra stop")
-        run_command("killall $(cat /var/run/cassandra/cassandra.pid)", log_error=False)
+        _log.info("Restarting Cassandra")
+
+        # Remove the cassandra.yaml file first - Cassandra won't start up while
+        # it's missing, so this keeps it stopped while we're clearing out its
+        # database
+        if os.path.exists(self.CASSANDRA_YAML_FILE):
+            os.remove(self.CASSANDRA_YAML_FILE)
+        
+        # Stop Cassandra directly rather than going through any 'service'
+        # commands - this should mean that supervisord keeps restarting
+        # Cassandra when running in Docker.
+        #
+        # Note that we can't use the init.d script here, because cassandra.yaml
+        # doesn't exist so it immediately exits.
+        run_command("start-stop-daemon -K -p /var/run/cassandra/cassandra.pid -R TERM/30/KILL/5")
+        
+        _log.info("Stopped Cassandra while changing config files")
 
         if destructive_restart:
+            _log.warn("Deleting /var/lib/cassandra - this is normal on initial clustering")
             run_command("rm -rf /var/lib/cassandra/")
             run_command("mkdir -m 755 /var/lib/cassandra")
             run_command("chown -R cassandra /var/lib/cassandra")
 
-        self.start_cassandra()
+        # Write back to cassandra.yaml - this allows Cassandra to start again.
+        safely_write(self.CASSANDRA_TOPOLOGY_FILE, topology)
+        safely_write(self.CASSANDRA_YAML_FILE, contents)
+        self.wait_for_cassandra()
 
         if os.path.exists("/etc/clearwater/force_cassandra_yaml_refresh"):
             os.remove("/etc/clearwater/force_cassandra_yaml_refresh")
@@ -209,39 +222,39 @@ class CassandraPlugin(SynchroniserPluginBase):
             pass
 
     def can_contact_cassandra(self):
-        if os.path.exists("/var/run/cassandra/cassandra.pid"):
-            rc = run_command("/usr/share/clearwater/bin/poll_cassandra.sh --no-grace-period")
-            return (rc == 0)
-        else:
-            # Cassandra isn't even running, let alone contactable
-            return False
+        rc = run_command("/usr/share/clearwater/bin/poll_cassandra.sh --no-grace-period", log_error=False)
+        return (rc == 0)
 
     def leave_cassandra_cluster(self):
         # We need Cassandra to be running so that we can connect on port 9160 and
         # decommission it. Check if we can connect on port 9160.
         if not self.can_contact_cassandra():
-            self.start_cassandra()
+            self.wait_for_cassandra()
 
-        run_command("monit unmonitor -g cassandra")
+        # Remove the cassandra.yaml file first - Cassandra won't start up while
+        # it's missing, so this prevents monit or supervisord from
+        # auto-restarting it after decommissioning.
+        if os.path.exists(self.CASSANDRA_YAML_FILE):
+            os.remove(self.CASSANDRA_YAML_FILE)
+ 
         run_command("nodetool decommission", self._sig_namespace)
 
-    def start_cassandra(self):
-        cassandra_not_monitored = True
+    def wait_for_cassandra(self):
+        # Don't start Cassandra, just rely on monit or supervisord to start it
+        # - this avoids race conditions where both we and monit start it at the
+        # same time and two copies start up.
 
+        _log.info("Waiting for Cassandra to come up...")
         # Wait until we can connect on port 9160 - i.e. Cassandra is running.
-        while True:
-            if cassandra_not_monitored:
-                # The monit command can fail because monit is still processing
-                # the unmonitor command from before (even though it has
-                # finished unmonitoring cassandra)
-                rc = run_command("monit monitor -g cassandra")
-                cassandra_not_monitored = (rc != 0)
-            elif self.can_contact_cassandra():
-                break
-
+        attempts = 0;
+        while not self.can_contact_cassandra():
             # Sleep so we don't tight loop
             time.sleep(1)
+            attempts += 1
+            if ((attempts % 10) == 0):
+                _log.info("Still waiting for Cassandra to come up...")
 
+        _log.info("Finished waiting for Cassandra to come up")
         # Restart clearwater-infrastructure so any necessary schema creation
         # scripts get run
         run_command("sudo service clearwater-infrastructure restart")
