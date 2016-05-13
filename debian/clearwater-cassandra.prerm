@@ -59,13 +59,13 @@ NAME=cassandra
 case "$1" in
     remove)
         rm -f /etc/monit/conf.d/clearwater-cassandra.monit
-        reload clearwater-monit &> /dev/null || true
+        pkill -HUP monit &> /dev/null || true
     ;;
 
     upgrade|deconfigure)
         # Use || /bin/true to ignore a failure, because set -e is in effect.
         rm -f /etc/monit/conf.d/clearwater-cassandra.monit
-        reload clearwater-monit &> /dev/null || true
+        pkill -HUP monit &> /dev/null || true
 
         # Remove any clearwater-cluster-manager plugins
         rm -f /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra*
