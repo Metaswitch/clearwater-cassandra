@@ -1,5 +1,5 @@
 clearwater-cassandra/* /
 
 # Install the etcd plugins
-clearwater-etcd-plugins/clearwater-cassandra/cassandra_plugin.py /usr/share/clearwater/clearwater-cluster-manager/plugins/
-clearwater-etcd-plugins/clearwater-cassandra/cassandra_failed_plugin.py /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/
+modules/clearwater-etcd-plugins/clearwater-cassandra/cassandra_plugin.py /usr/share/clearwater/clearwater-cluster-manager/plugins/
+modules/clearwater-etcd-plugins/clearwater-cassandra/cassandra_failed_plugin.py /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/
