@@ -100,8 +100,10 @@ do_start()
 
 }
 
-# Same as do_start except that we run Cassandra in the foreground (we provide the -f flag to Cassandra) and we don't tell 
-# start-stop-daemon to background it.
+#
+# Function that runs Cassandra in the foreground.
+# Same as do_start except that we provide the -f flag to Cassandra and we don't tell start-stop-daemon to background it (no -b).
+#
 do_run()
 {
     # Return
