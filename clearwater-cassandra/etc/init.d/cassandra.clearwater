@@ -100,28 +100,6 @@ do_start()
 
 }
 
-do_run()
-{
-    # Return
-    #   0 if daemon has been started
-    #   1 if daemon was already running
-    #   2 if daemon could not be started
-
-    ulimit -l unlimited
-    ulimit -n "$FD_LIMIT"
-
-    cassandra_home=`getent passwd cassandra | awk -F ':' '{ print $6; }'`
-    heap_dump_f="$cassandra_home/java_`date +%s`.hprof"
-    error_log_f="$cassandra_home/hs_err_`date +%s`.log"
-
-    [ -e `dirname "$PIDFILE"` ] || \
-        install -d -ocassandra -gcassandra -m755 `dirname $PIDFILE`
-
-    /usr/share/clearwater/bin/run-in-signaling-namespace start-stop-daemon -S -c cassandra -a /usr/sbin/cassandra -p "$PIDFILE" -- \
-        -p "$PIDFILE" -f -H "$heap_dump_f" -E "$error_log_f" >/dev/null || return 2
-
-}
-
 #
 # Function that stops the daemon/service
 #
@@ -139,14 +117,6 @@ do_stop()
 }
 
 case "$1" in
-  run)
-	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
-	do_run
-	case "$?" in
-		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-	esac
-	;;
   start)
 	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
 	do_start
@@ -192,7 +162,7 @@ case "$1" in
     exit "$stat"
     ;;
   *)
-	echo "Usage: $SCRIPTNAME {start|stop|run|restart|force-reload|status}" >&2
+	echo "Usage: $SCRIPTNAME {start|stop|restart|force-reload|status}" >&2
 	exit 3
 	;;
 esac
