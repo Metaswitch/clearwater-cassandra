@@ -36,7 +36,6 @@
 
 . /etc/clearwater/config
 
-TEMPLATE_IPV4_SECTION=""
 TEMPLATE_HEAPSIZE_SECTION=""
 
 TEMPLATE_FILE=/usr/share/clearwater/cassandra/cassandra-env.sh.template
