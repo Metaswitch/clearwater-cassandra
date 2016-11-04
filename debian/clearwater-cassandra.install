@@ -3,3 +3,5 @@ clearwater-cassandra/* /
 # Install the etcd plugins
 modules/clearwater-etcd-plugins/clearwater_cassandra/cassandra_plugin.py /usr/share/clearwater/clearwater-cluster-manager/plugins/
 modules/clearwater-etcd-plugins/clearwater_cassandra/cassandra_failed_plugin.py /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/
+modules/clearwater-etcd-plugins/clearwater_config_manager/cassandra_version_plugin.py /usr/share/clearwater/clearwater-config-manager/plugins
+modules/clearwater-etcd-plugins/clearwater_queue_manager/cassandra_upgrade_plugin.py /usr/share/clearwater/clearwater-queue-manager/plugins
