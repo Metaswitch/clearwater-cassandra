@@ -60,6 +60,6 @@ fi
 rc=$?
 if [[ $rc != 0 ]]
 then
-  nodetool enablethrift
+  /usr/share/clearwater/bin/run-in-signaling-namespace nodetool enablethrift
 fi
 exit $rc
