@@ -106,10 +106,12 @@ do_stop()
 
 # First find the pids of potential cassandra processes
 cassandra_process_pids=$(pgrep -f CassandraDaemon)
-# Then check to see that this is being run by the cassandra user
+# Check that anything we find is being run by the cassandra user, so that we
+# aren't too aggressive or wide-reaching in our checks
 for pid in $cassandra_process_pids ; do
   if (ps -u cassandra | grep $pid >/dev/null) ; then
-    # ...and that it isn't the process in the pidfile. Log and kill any leaks
+    # Check the process matches the pidfile. If it doesn't we have
+    # found a leaked process. Log, and kill the leaked process.
     if [ $pid -ne $(cat $PIDFILE) ] ; then
       logger -p daemon.error -t $NAME Found leaked cassandra $pid \(correct is $(cat $PIDFILE)\) - killing $pid
       kill -9 $pid
