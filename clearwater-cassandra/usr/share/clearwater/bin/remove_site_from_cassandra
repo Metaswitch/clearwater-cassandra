@@ -64,7 +64,7 @@ done
 
 CQLSH="/usr/share/clearwater/bin/run-in-signaling-namespace cqlsh $cassandra_hostname"
 
-for NODE in $(echo "select * from system.peers;" | $cqlsh | grep $REMOTE_SITE | tr -d ' ' | cut -d'|' -f 3)
+for NODE in $(echo "select * from system.peers;" | $CQLSH | grep $REMOTE_SITE | tr -d ' ' | cut -d'|' -f 3)
 do
   /usr/share/clearwater/bin/run-in-signaling-namespace nodetool removenode $NODE
 done
