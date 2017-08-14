@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # @file cassandra.monit
 #
@@ -26,7 +26,7 @@ if [ -n "$xdms_hostname" ]; then
   USE_CASSANDRA="Y"
 fi
 
-if [ "$USE_CASSANDRA" -eq "N" ]; then
+if [ "$USE_CASSANDRA" == "N" ]; then
 
   if [ -f /etc/monit/conf.d/clearwater-cassandra.monit ]; then
     rm /etc/monit/conf.d/clearwater-cassandra.monit
