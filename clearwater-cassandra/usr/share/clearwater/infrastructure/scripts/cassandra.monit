@@ -10,21 +10,7 @@
 # Metaswitch Networks in a separate written agreement.
 
 
-. /etc/clearwater/config
-
-USE_CASSANDRA="N"
-
-if [ -n "$hs_provisioning_hostname" ]; then
-  USE_CASSANDRA="Y"
-fi
-
-if [ -n "$memento_hostname" ]; then
-  USE_CASSANDRA="Y"
-fi
-
-if [ -n "$xdms_hostname" ]; then
-  USE_CASSANDRA="Y"
-fi
+. /usr/share/clearwater/cassandra_enabled
 
 if [ "$USE_CASSANDRA" == "N" ]; then
 
