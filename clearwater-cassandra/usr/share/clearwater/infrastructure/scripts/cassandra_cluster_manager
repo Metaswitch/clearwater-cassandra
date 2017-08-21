@@ -14,9 +14,10 @@
 
 if [ "$USE_CASSANDRA" == "N" ]; then
 
-  if [ -f /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py ]; then
-    rm /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py
-    rm /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/cassandra_failed_plugin.py
+  if [ -f /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py ] ||
+     [ -f /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/cassandra_failed_plugin.py ] ; then
+    rm -f /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py
+    rm -f /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/cassandra_failed_plugin.py
 
     # Stop cluster manager so monit will restart it
     /etc/init.d/clearwater-cluster-manager stop
@@ -24,7 +25,8 @@ if [ "$USE_CASSANDRA" == "N" ]; then
 
 else
 
-  if [ ! -f /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py ]; then
+  if [ ! -f /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py ] ||
+     [ ! -f /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/cassandra_failed_plugin.py ] ; then
     # Copy the plugins into place
     install -D --mode=0644 /usr/share/clearwater/conf/cassandra_plugin.py /usr/share/clearwater/clearwater-cluster-manager/plugins/
     install -D --mode=0644 /usr/share/clearwater/conf/cassandra_failed_plugin.py /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/
