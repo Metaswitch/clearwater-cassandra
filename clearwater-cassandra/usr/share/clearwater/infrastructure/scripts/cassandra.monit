@@ -26,6 +26,6 @@ if [ "$USE_CASSANDRA" == "N" ]; then
 
 else
   # Set up Monit configuration for Cassandra
-  install -D --mode=0644 /usr/share/clearwater/conf/clearwater-cassandra.monit /etc/monit/conf.d/
+  install -D --mode=0644 /usr/share/clearwater/conf/clearwater-cassandra.monit /etc/monit/conf.d/clearwater-cassandra.monit
   reload clearwater-monit || true
 fi
