@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# @file cassandra_cluster_manager
+#
+# Copyright (C) Metaswitch Networks 2017
+# If license terms are provided to you in a COPYING file in the root directory
+# of the source code repository by which you are accessing this code, then
+# the license outlined in that COPYING file applies to your use.
+# Otherwise no rights are granted except for those provided to you by
+# Metaswitch Networks in a separate written agreement.
+
+
+. /usr/share/clearwater/cassandra_enabled
+
+if [ "$USE_CASSANDRA" == "N" ]; then
+
+  if [ -f /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py ] ||
+     [ -f /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/cassandra_failed_plugin.py ] ; then
+    rm -f /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py
+    rm -f /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/cassandra_failed_plugin.py
+
+    # Stop cluster manager so monit will restart it
+    /etc/init.d/clearwater-cluster-manager stop
+  fi
+
+else
+
+  if [ ! -f /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py ] ||
+     [ ! -f /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/cassandra_failed_plugin.py ] ; then
+    # Copy the plugins into place
+    install -D --mode=0644 /usr/share/clearwater/conf/cassandra_plugin.py /usr/share/clearwater/clearwater-cluster-manager/plugins/cassandra_plugin.py
+    install -D --mode=0644 /usr/share/clearwater/conf/cassandra_failed_plugin.py /usr/share/clearwater/clearwater-cluster-manager/failed_plugins/cassandra_failed_plugin.py
+
+    # Stop cluster manager so monit will restart it
+    /etc/init.d/clearwater-cluster-manager stop
+  fi
+fi

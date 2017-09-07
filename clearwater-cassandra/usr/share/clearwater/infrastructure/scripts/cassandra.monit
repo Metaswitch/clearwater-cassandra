@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# @file cassandra.monit
+#
+# Copyright (C) Metaswitch Networks 2017
+# If license terms are provided to you in a COPYING file in the root directory
+# of the source code repository by which you are accessing this code, then
+# the license outlined in that COPYING file applies to your use.
+# Otherwise no rights are granted except for those provided to you by
+# Metaswitch Networks in a separate written agreement.
+
+
+. /usr/share/clearwater/cassandra_enabled
+
+if [ "$USE_CASSANDRA" == "N" ]; then
+
+  if [ -f /etc/monit/conf.d/clearwater-cassandra.monit ]; then
+    rm /etc/monit/conf.d/clearwater-cassandra.monit
+
+    # Force monit to reload its configuration
+    reload clearwater-monit || true
+
+    # Stop Cassandra if it was running
+    /etc/init.d/cassandra stop
+  fi
+
+else
+  # Set up Monit configuration for Cassandra
+  install -D --mode=0644 /usr/share/clearwater/conf/clearwater-cassandra.monit /etc/monit/conf.d/clearwater-cassandra.monit
+  reload clearwater-monit || true
+fi
