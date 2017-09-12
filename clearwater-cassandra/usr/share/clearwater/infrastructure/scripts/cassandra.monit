@@ -10,7 +10,7 @@
 # Metaswitch Networks in a separate written agreement.
 
 
-. /usr/share/clearwater/infrastructure/utils/cassandra_enabled
+. /usr/share/clearwater/utils/cassandra_enabled
 
 if [ "$USE_CASSANDRA" == "N" ]; then
 
