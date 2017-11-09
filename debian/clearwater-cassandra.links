@@ -1,6 +1,6 @@
+/usr/share/clearwater/bin/do_backup.sh /usr/bin/cw-do_backup
+/usr/share/clearwater/bin/list_backups.sh /usr/bin/cw-list_backups
+
 /usr/share/clearwater/bin/update_cassandra_strategy /usr/sbin/cw-update_cassandra_strategy
 /usr/share/clearwater/bin/remove_site_from_cassandra /usr/sbin/cw-remove_site_from_cassandra
 /usr/share/clearwater/bin/restore_backup.sh /usr/sbin/cw-restore_backup
-
-/usr/share/clearwater/bin/do_backup.sh /usr/bin/cw-do_backup
-/usr/share/clearwater/bin/list_backups.sh /usr/bin/cw-list_backups
