@@ -70,13 +70,6 @@ fi
 [ -d "$DATA_DIR/$KEYSPACE" ] || die "Keyspace $KEYSPACE does not exist" $ERROR_USER
 echo "Restoring backup for keyspace $KEYSPACE..."
 
-# Stop monit from restarting Cassandra while we restore
-monit unmonitor -g cassandra
-
-# Stop Cassandra.  We remove any xss=.., as this can be printed out by
-# cassandra-env.sh
-service cassandra stop | grep -v "^xss = "
-
 echo "Clearing commitlog..."
 rm -rf $COMMITLOG_DIR/*
 
@@ -105,7 +98,3 @@ do
   fi
 done
 
-# Start Cassandra.  We remove any xss=.., as this can be printed out by
-# cassandra-env.sh
-service cassandra start | grep -v "^xss = "
-monit monitor -g cassandra
