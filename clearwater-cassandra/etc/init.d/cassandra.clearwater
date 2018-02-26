@@ -23,9 +23,9 @@ WAIT_FOR_START=10
 CASSANDRA_HOME=/usr/share/cassandra
 FD_LIMIT=100000
 
-[ -e /usr/share/cassandra/apache-cassandra.jar ] || ( echo "Exiting: apache-cassandra.jar is missing" && exit 0 )
-[ -e /etc/cassandra/cassandra.yaml ] || ( echo "Exiting: cassandra.yaml is missing" && exit 0 )
-[ -e /etc/cassandra/cassandra-env.sh ] || ( echo "Exiting: cassandra-env.sh is missing" && exit 0 )
+[ -e /usr/share/cassandra/apache-cassandra.jar ] || { echo "Exiting: apache-cassandra.jar is missing" && exit 0; }
+[ -e /etc/cassandra/cassandra.yaml ] || { echo "Exiting: cassandra.yaml is missing" && exit 0; }
+[ -e /etc/cassandra/cassandra-env.sh ] || { echo "Exiting: cassandra-env.sh is missing" && exit 0; }
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
